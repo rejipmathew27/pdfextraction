@@ -8,11 +8,9 @@ from io import StringIO
 import base64
 import os
 #------- OCR ------------
+import easyocr
 import pdf2image
-import pytesseract
-from pytesseract import Output, TesseractError
 from PIL import Image
-
 
 @st.cache_data  # Cache the results for faster processing
 def images_to_txt(path, language):
@@ -21,10 +19,12 @@ def images_to_txt(path, language):
     else:  # Assuming it's an image file
         image = Image.open(path)
         images = [image]
+    
+    reader = easyocr.Reader([language]) # need to run only once to load model into memory
     all_text = []
-    for i in images:
-        pil_im = i
-        text = pytesseract.image_to_string(pil_im, lang=language)
+    for img in images:
+        result = reader.readtext(img)
+        text = '\n'.join([detection[1] for detection in result])
         all_text.append(text)
     return all_text, len(all_text)
 
@@ -144,7 +144,7 @@ if uploaded_file is not None:
 
         elif option == "OCR":
             # Extract text using OCR
-            language = st.text_input("Enter language code (e.g., 'eng' for English):", "eng")
+            language = st.text_input("Enter language code (e.g., 'en' for English):", "en")
             all_text, nbPages = images_to_txt(uploaded_file, language)
 
             # Display or process the extracted text
