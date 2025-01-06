@@ -2,3 +2,5 @@ streamlit
 pdfminer.six
 pdf2image
 pytesseract==0.3.13
+easyocr
+Pillow
