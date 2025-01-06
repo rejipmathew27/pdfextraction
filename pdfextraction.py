@@ -12,7 +12,6 @@ import easyocr
 import pdf2image
 from PIL import Image
 
-@st.cache_data  # Cache the results for faster processing
 def images_to_txt(path, language):
     if path.name.endswith('.pdf'):
         images = pdf2image.convert_from_bytes(path.read())
@@ -20,13 +19,32 @@ def images_to_txt(path, language):
         image = Image.open(path)
         images = [image]
     
-    reader = easyocr.Reader([language]) # need to run only once to load model into memory
+    reader = easyocr.Reader([language])
     all_text = []
     for img in images:
         result = reader.readtext(img)
-        text = '\n'.join([detection[1] for detection in result])
-        all_text.append(text)
+
+        lines = []
+        current_line = ""
+        current_line_y = None
+        for bbox, text, conf in result:
+            (top_left, top_right, bottom_right, bottom_left) = bbox
+            y = (top_left[1] + bottom_left[1]) / 2  # Average y-coordinate
+
+            if current_line_y is None:
+                current_line_y = y
+            elif abs(y - current_line_y) > 10:  # New line detected (adjust threshold as needed)
+                lines.append(current_line.strip())
+                current_line = ""
+                current_line_y = y
+
+            current_line += text + " "
+
+        lines.append(current_line.strip())  # Add the last line
+        all_text.append("\n".join(lines))
+
     return all_text, len(all_text)
+
 
 @st.cache_data  # Cache the results for faster processing
 def convert_pdf_to_txt_pages(path):
