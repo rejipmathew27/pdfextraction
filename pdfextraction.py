@@ -71,34 +71,15 @@ def convert_pdf_to_txt_file(path):
     retstr.close()
     return t, nbPages
 
-@st.cache_data  # Cache the results for faster processing
-def save_pages(pages):
-    # Create the directory if it doesn't exist
-    if not os.path.exists("./file_pages"):
-        os.makedirs("./file_pages")
-
-    files = []
-    for page in range(len(pages)):
-        filename = "page_"+str(page)+".txt"
-        with open("./file_pages/"+filename, 'w', encoding="utf-8") as file:
-            file.write(pages[page])
-            files.append(file.name)
-    
-    zipPath = './file_pages/pdf_to_txt.zip'
-    zipObj = ZipFile(zipPath, 'w')
-    for f in files:
-        zipObj.write(f)
-    zipObj.close()
-
-    return zipPath
-
 def displayPDF(file):
     base64_pdf = base64.b64encode(file.read()).decode('utf-8')
     pdf_display = F'<iframe src="data:application/pdf;base64,{base64_pdf}" width="700" height="1000" type="application/pdf"></iframe>'
     st.markdown(pdf_display, unsafe_allow_html=True)
 
 def displayImage(file):
-    st.image(file, caption='Uploaded Image', use_column_width=True)
+    # Use use_container_width=True to retain width
+    st.image(file, caption='Uploaded Image', use_container_width=True)
+
 
 # --- Streamlit App ---
 
@@ -123,35 +104,26 @@ if uploaded_file is not None:
 
         if option == "PDFMiner":
             # Extract text using PDFMiner
-            texts, nbPages = convert_pdf_to_txt_pages(uploaded_file) 
-            # Or use convert_pdf_to_txt_file(uploaded_file) to get all text at once
+            full_text, nbPages = convert_pdf_to_txt_file(uploaded_file)
 
-            # Display or process the extracted text
-            st.write(f"The file has {nbPages} pages")
-            for i in range(len(texts)):
-                st.write(f"Page {i+1}:")
-                st.write(texts[i])
-
-            # Example of saving the extracted text to a zip file
-            zip_path = save_pages(texts)
-            with open(zip_path, "rb") as fp:
-                btn = st.download_button(
-                    label="Download ZIP",
-                    data=fp,
-                    file_name="pdf_to_txt.zip",
-                    mime="application/zip"
-                )
+            # Create and download the text file
+            st.download_button(
+                label="Download Text",
+                data=full_text,
+                file_name="extracted_text.txt",
+                mime="text/plain"
+            )
 
         elif option == "OCR":
             # Extract text using OCR
             language = st.text_input("Enter language code (e.g., 'en' for English):", "en")
             all_text, nbPages = images_to_txt(uploaded_file, language)
+            full_text = "\n".join(all_text)  # Combine all pages into a single string
 
-            # Display or process the extracted text
-            if uploaded_file.name.endswith('.pdf'):
-                st.write(f"The pdf file has {nbPages} pages")
-            else:
-                st.write(f"The image file has {nbPages} pages")
-            for i in range(len(all_text)):
-                st.write(f"Page {i+1}:")
-                st.write(all_text[i])
+            # Create and download the text file
+            st.download_button(
+                label="Download Text",
+                data=full_text,
+                file_name="extracted_text.txt",
+                mime="text/plain"
+            )
